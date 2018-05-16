@@ -4,6 +4,7 @@ const PropTypes = require('prop-types');
 
 const ALL_INITIALIZERS = [];
 const READY_INITIALIZERS = [];
+const ROUTE_INITIALIZERS = {};
 
 function isWebpackReady(getModuleIds) {
   if (typeof __webpack_modules__ !== 'object') {
@@ -104,6 +105,7 @@ function createLoadableComponent(loadFn, options) {
     render: render,
     webpack: null,
     modules: null,
+    route: null
   }, options);
 
   let res = null;
@@ -116,6 +118,8 @@ function createLoadableComponent(loadFn, options) {
   }
 
   ALL_INITIALIZERS.push(init);
+
+  opts.route ? ROUTE_INITIALIZERS[opts.route] = init : null
 
   if (typeof opts.webpack === 'function') {
     READY_INITIALIZERS.push(() => {
@@ -290,6 +294,13 @@ function flushInitializers(initializers) {
     }
   });
 }
+
+Loadable.preloadRoute = route => {
+  return new Promise((resolve, reject) => {
+    let initializers = ROUTE_INITIALIZERS[route] ? [ ROUTE_INITIALIZERS[route] ] : []
+    flushInitializers(initializers).then(resolve, reject);
+  });
+};
 
 Loadable.preloadAll = () => {
   return new Promise((resolve, reject) => {
