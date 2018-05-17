@@ -1,6 +1,7 @@
 'use strict';
 const React = require('react');
 const PropTypes = require('prop-types');
+const matchPath = require('react-router').matchPath;
 
 const ALL_INITIALIZERS = [];
 const READY_INITIALIZERS = [];
@@ -119,7 +120,17 @@ function createLoadableComponent(loadFn, options) {
 
   ALL_INITIALIZERS.push(init);
 
-  opts.route ? ROUTE_INITIALIZERS[opts.route] = init : null
+  if( opts.route ){
+    if( typeof opts.route === 'string' ){
+      ROUTE_INITIALIZERS[opts.route] = init;
+    } else if ( opts.route instanceof Array ){
+      let matchRoutes = opts.route;
+      while (matchRoutes.length) {
+        let route = matchRoutes.pop();
+        ROUTE_INITIALIZERS[route] = init;
+      }
+    }
+  }
 
   if (typeof opts.webpack === 'function') {
     READY_INITIALIZERS.push(() => {
@@ -296,8 +307,16 @@ function flushInitializers(initializers) {
 }
 
 Loadable.preloadRoute = route => {
+  let initializers = []
+  for (var path in ROUTE_INITIALIZERS) {
+    let match = matchPath(route, { path: path, exact: true })
+    if (match != null) {
+      initializers.push(ROUTE_INITIALIZERS[path])
+      break
+    }
+  }
+
   return new Promise((resolve, reject) => {
-    let initializers = ROUTE_INITIALIZERS[route] ? [ ROUTE_INITIALIZERS[route] ] : []
     flushInitializers(initializers).then(resolve, reject);
   });
 };
